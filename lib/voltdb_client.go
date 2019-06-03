@@ -65,7 +65,7 @@ func initializeClient(user string, pass string, addrs []string, useHttp bool, in
 		errMsg := re.ReplaceAllString(addr, `$1=**********`)
 
 		if err != nil {
-			log.Errorln(err)
+			log.Warnln(err)
 
 			retryCounter++
 			if retryCounter <= retryMax {
