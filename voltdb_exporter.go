@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/log"
 )
 
 var (
@@ -36,8 +36,8 @@ func init() {
 	flag.BoolVar(&insecureHTTPS, "i", false, "Skip certificate check")
 }
 
-// Check that CLI arguments are properly set
-func checkConfiguration() {
+// Override values if the ENV vars are set
+func envOverrides() {
 	envVarHost, isEnvVarHostSet := os.LookupEnv("VOLTDB_EXPORTER_HOST")
 	envVarUser, isEnvVarUserSet := os.LookupEnv("VOLTDB_EXPORTER_USER")
 	envVarPass, isEnvVarPassSet := os.LookupEnv("VOLTDB_EXPORTER_PASS")
@@ -76,7 +76,7 @@ func checkConfiguration() {
 func main() {
 	flag.Parse()
 
-	checkConfiguration()
+	envOverrides()
 
 	// split comma seperated string into list of databases
 	databases := strings.Split(addresses, ",")
@@ -98,6 +98,6 @@ func main() {
 	http.Handle(metricPath, promhttp.Handler())
 
 	// Start HTTP server and prepare for scraping
-	log.Printf("listening at %s", listenAddress)
+	log.Infof("listening at %s", listenAddress)
 	log.Fatal(http.ListenAndServe(listenAddress, nil))
 }

@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"time"
-
-	"github.com/prometheus/common/log"
 )
 
 var (
@@ -37,7 +34,6 @@ type Stats struct {
 }
 
 func NewVoltDBClient(user string, pass string, dbs []string, useHttp bool, insecureHttps bool) *VoltDBClient {
-	initializeClient(user, pass, dbs, useHttp, insecureHttps)
 
 	return &VoltDBClient{
 		username:      user,
@@ -48,40 +44,12 @@ func NewVoltDBClient(user string, pass string, dbs []string, useHttp bool, insec
 	}
 }
 
-func initializeClient(user string, pass string, addrs []string, useHttp bool, insecureHttps bool) {
-	var proto string
-	for _, addr := range addrs {
-		if !useHttp {
-			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureHttps}
-			proto = "https"
-		} else {
-			proto = "http"
-		}
+func get(path string, client *VoltDBClient) ([]byte, error) {
 
-		request := fmt.Sprintf("%s://%s/api/1.0/?Procedure=@Ping&admin=false&User=%s&Password=%s", proto, addr, user, pass)
-		resp, err := http.Get(request)
-
-		re := regexp.MustCompile(`(Password)=(.*?:)`)
-		errMsg := re.ReplaceAllString(addr, `$1=**********`)
-
-		if err != nil {
-			log.Warnln(err)
-
-			retryCounter++
-			if retryCounter <= retryMax {
-				time.Sleep(retryWait * time.Second)
-				initializeClient(user, pass, addrs, useHttp, insecureHttps)
-			} else {
-				log.Fatalln("Could not connect to " + errMsg)
-			}
-		} else if resp.StatusCode != http.StatusOK {
-			log.Errorln(fmt.Sprintf("Failed to connect to client at %s", errMsg))
-		}
+	if !client.useHttp {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: client.insecureHttps}
 	}
-	log.Infoln("Successfully connected to client(s)")
-}
 
-func get(path string) ([]byte, error) {
 	resp, err := http.Get(path)
 	if err != nil {
 		return nil, err
@@ -113,9 +81,9 @@ func setPaths(addr string, client *VoltDBClient) []string {
 	}
 }
 
-func scrapeData(paths []string) (data [][]byte, err error) {
+func scrapeData(paths []string, client *VoltDBClient) (data [][]byte, err error) {
 	for _, path := range paths {
-		buf, err := get(path)
+		buf, err := get(path, client)
 		if err != nil {
 			return nil, err
 		}
@@ -129,7 +97,7 @@ func getStats(addrs []string, client *VoltDBClient) (*[]Stats, error) {
 	for _, addr := range addrs {
 		paths := setPaths(addr, client)
 
-		data, err := scrapeData(paths)
+		data, err := scrapeData(paths, client)
 		if err != nil {
 			return nil, err
 		} else {
