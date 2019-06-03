@@ -4,9 +4,17 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
+	"time"
+
+	"github.com/prometheus/common/log"
+)
+
+var (
+	retryCounter int8          = 0
+	retryMax     int8          = 120
+	retryWait    time.Duration = 5
 )
 
 type VoltDBClient struct {
@@ -52,15 +60,25 @@ func initializeClient(user string, pass string, addrs []string, useHttp bool, in
 
 		request := fmt.Sprintf("%s://%s/api/1.0/?Procedure=@Ping&admin=false&User=%s&Password=%s", proto, addr, user, pass)
 		resp, err := http.Get(request)
+
+		re := regexp.MustCompile(`(Password)=(.*?:)`)
+		errMsg := re.ReplaceAllString(addr, `$1=**********`)
+
 		if err != nil {
-			log.Fatal(err)
+			log.Errorln(err)
+
+			retryCounter++
+			if retryCounter <= retryMax {
+				time.Sleep(retryWait * time.Second)
+				initializeClient(user, pass, addrs, useHttp, insecureHttps)
+			} else {
+				log.Fatalln("Could not connect to " + errMsg)
+			}
 		} else if resp.StatusCode != http.StatusOK {
-			re := regexp.MustCompile(`(Password)=(.*?:)`)
-			errMsg := re.ReplaceAllString(addr, `$1=**********`)
-			log.Fatal(fmt.Sprintf("Failed to connect to client at %s", errMsg))
+			log.Errorln(fmt.Sprintf("Failed to connect to client at %s", errMsg))
 		}
 	}
-	log.Print("Successfully connected to client(s)")
+	log.Infoln("Successfully connected to client(s)")
 }
 
 func get(path string) ([]byte, error) {
