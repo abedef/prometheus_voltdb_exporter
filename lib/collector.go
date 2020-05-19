@@ -1,6 +1,7 @@
-package lib
+/**/ package lib
 
 import (
+	ejson "encoding/json"
 	"fmt"
 	"regexp"
 
@@ -60,7 +61,7 @@ func collectPerDatabaseGauge(statslist *[]Stats, vec *prometheus.GaugeVec, colle
 
 func getClusterState(stats Stats) float64 {
 	var json string
-	gjson.Unmarshal(stats.state, &json)
+	ejson.Unmarshal(stats.state, &json)
 	value := gjson.Get(json, "results.0.data.19.2")
 	if value.Str == "RUNNING" {
 		return float64(1)
@@ -70,7 +71,7 @@ func getClusterState(stats Stats) float64 {
 
 func getCPUPercentUsed(stats Stats) float64 {
 	var json string
-	gjson.Unmarshal(stats.cpu, &json)
+	ejson.Unmarshal(stats.cpu, &json)
 	value := gjson.Get(json, "results.0.data.0.3")
 
 	return value.Num
@@ -78,7 +79,7 @@ func getCPUPercentUsed(stats Stats) float64 {
 
 func getClusterTxns(stats Stats) float64 {
 	var json string
-	gjson.Unmarshal(stats.txns, &json)
+	ejson.Unmarshal(stats.txns, &json)
 	value := gjson.Get(json, "results.0.data.0.5")
 
 	return value.Num
@@ -86,7 +87,7 @@ func getClusterTxns(stats Stats) float64 {
 
 func getClusterLatency99(stats Stats) float64 {
 	var json string
-	gjson.Unmarshal(stats.latency, &json)
+	ejson.Unmarshal(stats.latency, &json)
 	value := gjson.Get(json, "results.0.data.0.8")
 
 	return value.Num / 1000 // Converted to ms
@@ -94,7 +95,7 @@ func getClusterLatency99(stats Stats) float64 {
 
 func getServerRAMUsed(stats Stats) float64 {
 	var json string
-	gjson.Unmarshal(stats.ram, &json)
+	ejson.Unmarshal(stats.ram, &json)
 	value := gjson.Get(json, "results.0.data.0.3")
 
 	return value.Num / 1000000 // Converted to GB
@@ -102,7 +103,7 @@ func getServerRAMUsed(stats Stats) float64 {
 
 func getDrRole(stats Stats) float64 {
 	var json string
-	gjson.Unmarshal(stats.dr_role, &json)
+	ejson.Unmarshal(stats.dr_role, &json)
 	value := gjson.Get(json, "results.0.data.0.0")
 	if value.Str == "MASTER" {
 		return float64(1)
@@ -116,7 +117,7 @@ func getDrRole(stats Stats) float64 {
 
 func getDrState(stats Stats) float64 {
 	var json string
-	gjson.Unmarshal(stats.dr_state, &json)
+	ejson.Unmarshal(stats.dr_state, &json)
 	value := gjson.Get(json, "results.0.data.0.1")
 	if value.Str == "ACTIVE" {
 		return float64(1)
